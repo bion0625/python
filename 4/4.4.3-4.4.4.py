@@ -21,3 +21,17 @@ s = str(pgrr.a['href']).split('=') # pgrr.a['href]로 구한 문자열을 '=' �
 # s는 ['/item/sise_day.naver?code', '068270&page', '463']
 
 last_page = s[-1] # 리스트 제일 마지막 원소가 바로 구하려는 전체 페이지 수다.
+
+# 4.4.4 전체 페이지 읽어오기
+
+import pandas as pd
+df = pd.DataFrame() # 일별 시세를 저장할 df 변수가 데이터프레임형임을 인터프리터에 알려준다.
+sise_url = 'https://finance.naver.com/item/sise_day.naver?code=068270'
+
+for page in range(1, int(last_page)+1): # 1페이지부터 last_page까지 반복한다.
+    url = '{}&page={}'.format(sise_url, page) # for문의 page 숫자를 이용하여 요청할 URL 페이지 수를 변경한다.
+    html = requests.get(url, headers={'User-agent': 'Mozilla/5.0'}).text 
+    df = pd.concat([df, pd.read_html(html, header=0, encoding='euc-kr')[0]]) # read_html() 함수로 읽은 한 페이지 분량의 데이터프레임을 df 객체에 추가한다.
+
+df = df.dropna() # 값이 빠진 행을 제거한다.
+print(df)
