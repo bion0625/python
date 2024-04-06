@@ -1,0 +1,17 @@
+version: '3'
+services:
+  mysql:
+    image: mariadb:10
+    container_name: stockdb
+    ports:
+      - 3306:3306 # HOST:CONTAINER
+    environment:
+      MYSQL_DATABASE: stockdb
+      MYSQL_ROOT_PASSWORD: admin
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./db/mariadb/init:/docker-entrypoint-initdb.d
+    #   - C:/mysql/data:/var/lib/mysql
