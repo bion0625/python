@@ -7,8 +7,8 @@ dow = pdr.get_data_yahoo('^DJI', '2000-01-04')
 kospi = pdr.get_data_yahoo('^KS11', '2000-01-04')
 
 df = pd.DataFrame({'DOW': dow['Close'], 'KOSPI': kospi['Close']}) # 다우존스 지수의 종가 칼럼과 코스피 지수의 종가 칼럼으로 데이터프레임을 생성
-df = df.bfill() #
-df = df.ffill() #
+df = df.bfill() # NaN가 있으면, 뒤값으로 대체
+df = df.ffill() # 마지막 값은 뒤값이 없으므로, 마지막 값이 NaN인 경우 NaN이 있는 것이르모, NaN 있으면 앞에 값으로 대체
 
 from scipy import stats
 # linregress() 함수를 이용하면 시리즈 객체 두 개만으로 간단히 선형 회귀 모델을 생성하여 분석할 수 있다.
