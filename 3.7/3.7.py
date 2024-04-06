@@ -10,4 +10,10 @@ df = pd.DataFrame({'DOW': dow['Close'], 'KOSPI': kospi['Close']}) # 다우존스
 df = df.bfill() # NaN가 있으면, 뒤값으로 대체
 df = df.ffill() # 마지막 값은 뒤값이 없으므로, 마지막 값이 NaN인 경우 NaN이 있는 것이르모, NaN 있으면 앞에 값으로 대체
 
+# 3.7.1 데이터프레임으로 상관계수 구하기
 print(df.corr())
+
+# 3.7.2 시리즈로 상관계수 구하기
+print(
+    df['DOW'].corr(df['KOSPI']) # df.DOW.forr(df.KOSPI)와 같다.
+    )
