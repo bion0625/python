@@ -17,3 +17,9 @@ print(df.corr())
 print(
     df['DOW'].corr(df['KOSPI']) # df.DOW.forr(df.KOSPI)와 같다.
     )
+
+# 3.7.3 결정계수 구하기
+r_value = df['DOW'].corr(df['KOSPI'])
+print(r_value)
+r_squared = r_value ** 2
+print(r_squared)
