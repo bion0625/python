@@ -76,7 +76,7 @@ class DBUpdater:
                     self.codes[code] = company # codes 딕셔너리에 '키~값'으로 종목코드와 회사명을 추가한다.
                     tmnow = datetime.now().strftime('%Y-%m-%d %H:%M')
                     print(f"[{tmnow}] {idx:04d} REPLACE INTO company_info"\
-                          f"VALUES ({code}, {company}, {today})")
+                          f" VALUES ({code}, {company}, {today})")
                 self.conn.commit()
                 print('')
 
