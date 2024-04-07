@@ -6,8 +6,8 @@ services:
     ports:
       - 3306:3306 # HOST:CONTAINER
     environment:
-      MYSQL_DATABASE: stockdb
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: INVESTAR
+      MYSQL_ROOT_PASSWORD: snake.land.
       TZ: Asia/Seoul
     command:
       - --character-set-server=utf8mb4
