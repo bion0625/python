@@ -1,8 +1,9 @@
-import pymysql
 import pandas as pd
-import requests
+import pymysql, requests, json, calendar
+from threading import Timer
 from io import StringIO
 from datetime import datetime
+from bs4 import BeautifulSoup
 
 # 05_StockPriceAPI/Investar/DBUpdater.py
 class DBUpdater:
@@ -82,16 +83,86 @@ class DBUpdater:
 
     def read_naver(self, code, company, pages_to_fetch):
         """네이버 금융에서 주식 시세를 읽어서 데이터프레임으로 반환"""
+        try:
+            url=f"http://finance.naver.com/item/sise_day.nhn?code={code}"
+            html = requests.get(url, headers={'User-agent': 'Mozilla/5.0'}).text
+            bs = BeautifulSoup(html, "lxml")
+            pgrr = bs.find("td", class_="pgRR")
+            if pgrr is None:
+                return None
+            s = str(pgrr.a["href"]).split('=')
+            lastpage = s[-1] # 네이버 금융에서 일별 시세의 마지막 페이지를 구한다.
+            df = pd.DataFrame()
+            pages = min(int(lastpage), pages_to_fetch) # 설정 파일에 설정된 페이지 수(pages_to_fetch)와 위의 페이지 수에서작은 것을 택한다.
+            for page in range(1, pages + 1):
+                u = '{}&page={}'.format(url, page)
+                req = requests.get(u, headers={'User-agent': 'Mozilla/5.0'})
+                df = pd.concat([df, pd.read_html(StringIO(req.text), header=0)[0]]) # 일별 시세 페이지를 read_html()로 읽어서 데이터프레임에 추가한다.
+                tmnow = datetime.now().strftime('%Y-%m-%d %H:%M') # 연.월.일 형식의 일자 데이터를 연-월-일 형식으로 변경한다.
+                print('[{}] {} ({}) : {:04d}/{:04d} pages are downloading....'.
+                      format(tmnow, company, code, page, pages), end="\r")
+            df = df.rename(columns={'날짜':'date', '종가':'close', '전일비':'diff', 
+                                    '시가':'open', '고가':'high', '저가':'low', '거래량':'volume'}) # 네이버 금융의 한글 칼럼명을 영문으로 변경한다.
+            df['date'] = df['date'].replace('.', '-') #
+            df = df.dropna()
+            # 마리아디비에서 BIGINT형으로 지정한 칼럼들의 데이터형을 int형으로 변경한다.
+            df[['close','diff','open','high','low','volume']] = df[['close','diff','open','high','low','volume']].astype(int)
+            df = df[['date','open','high','low','close','diff','volume']] # 원하는 순서로 칼럼을 재조합하여 데이터프레임을 만든다.
+        except Exception as e:
+            print('Exception occured :'. str(e))
+            return None
+        return df
     
     def replace_info_db(self, df, num, code, company):
         """네이버 금융에서 읽어온 주식 시세를 DB에 REPLACE"""
+        with self.conn.cursor() as curs:
+            for r in df.itertuples(): # 인수로 넘겨받은 데이터프레임을 튜플로 순회처리한다.
+                sql = f"REPLACE INTO daily_price VALUES ('{code}', "\
+                    f"'{r.date}', {r.open}, {r.high}, {r.low}, {r.close}, "\
+                    f"{r.diff}, {r.volume})"
+                curs.execute(sql) # REPLACE INTO 구문으로 daily_price 테이블을 업데이트한다.
+            self.conn.commit() # commit() 함수를 호출해 마리아디비에 반영한다.
+            print('[{}] #{:04d} {} ({}) : {} rows > REPLACE INTO daily_'\
+                  'price [OK]'.format(datetime.now().strftime('%Y-%m-%d'\
+                    ' %H:%M'), num + 1, company, code, len(df)))
     
     def update_daily_price(self, pages_to_fetch):
         """KRX 상장법인의 주식 시세를 네이버로부터 읽어서 DB에 업데이트"""
+        for idx, code in enumerate(self.codes): # self.codes 딕셔너리에 저장된 모든 종목코드에 대해 순회처리한다.
+            df = self.read_naver(code, self.codes[code], pages_to_fetch) # read_naver() 메서드를 이용하여 종목코드에 대한 일별 시세 데이터 프레임을 구한다.
+            if df is None:
+                continue
+            self.replace_info_db(df, idx, code, self.codes[code]) # 일별 시세 데이터프레임이 구해지면 replace_into_db() 메서드로 DB에 저장한다.
     
     def execute_daily(self):
         """실행 즉시 및 매밀 오후 다섯시에 daily_price 테이블 업데이트"""
+        self.update_comp_info() # update_comp_info() 메서드를 호출하여 상장 법인 목록을 DB에 업데이트한다.
+        try:
+            with open('config.json', 'r') as in_file: # DBUpdater.py가 있는 디렉터리에서 config.json 파일을 읽기 모드로 연다.
+                config = json.load(in_file)
+                pages_to_fetch = config['pages_to_fetch'] # 파일이 있다면 pages_to_fetch값을 읽어서 프로그램에서 사용한다.
+        except FileNotFoundError: # 위에서 열려고 시도했던 config.json 파일이 존재하지 않는 경우
+            with open('config.json', 'w') as out_file:
+                pages_to_fetch = 100 # 최초 실행 시 프로그램에서 사용할 pages_to_fetch 값을 100으로 설정한다(config.json 파일에 pages_to_fetch값을 1로 저장해서 이후부터는 1페이지씩 읽음).
+                config = {'pages_to_fetch' : 1}
+                json.dump(config, out_file)
+        self.update_daily_price(pages_to_fetch) # pages_to_fetch값으로 update_daily_price() 메서드를 호출한다.
+
+        tmnow = datetime.now()
+        lastday = calendar.monthrange(tmnow.year, tmnow.month)[1] # 이번 달의 마지막 날 (lastday)을 구해 다음날 오후 5시를 계산하는 데 사용한다.
+        if tmnow.month == 12 and tmnow.day == lastday:
+            tmnext = tmnow.replace(year=tmnow.year+1, month=1, day=1, hour=17, minute=0, second=0)
+        elif tmnow.day == lastday:
+            tmnext = tmnow.replace(month=tmnow.month+1, day=1, hour=17, minute=0, second=0)
+        else:
+            tmnext = tmnow.replace(day=tmnow.day+1, hour=17, minute=0, second=0)
+        tmdiff = tmnext - tmnow
+        secs = tmdiff.seconds
+
+        t = Timer(secs, self.execute_daily) # 메서드를 싱핼하는 타이머(Timer) 객체를 생성한다.
+        print('Waiting for next update ({}) ...'.format(tmnext.strftime('%Y-%m-%d %H:%M')))
+        t.start()
 
 if __name__ == '__main__':
     dbu = DBUpdater() # DBUpdater.py가 단독으로 실행되면 DBUpdater 객체를 생성한다.
-    dbu.update_comp_info() # company_info 테이블에 오늘 업데이트된 내용이 있는지 확인하고, 없으면 company_info 테이블에 업데이트하고 codes 딕셔너리에도 저장한다.
+    dbu.execute_daily()

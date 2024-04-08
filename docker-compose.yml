@@ -12,6 +12,7 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --wait_timeout=28800
     volumes:
       - ./db/mariadb/init:/docker-entrypoint-initdb.d
     #   - C:/mysql/data:/var/lib/mysql
