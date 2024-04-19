@@ -17,10 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from hello import views
 from index import views as index_view
+from balance import views as balance_views
 from django.urls import path, re_path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     re_path(r'^(?P<name>[A-Z][a-z]*)$', views.sayHello),
     path('index/', index_view.main_view),
+    path('balance/', balance_views.main_view)
 ]
