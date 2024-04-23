@@ -24,3 +24,9 @@ def check_creon_system():
         return False;
     
     return True;
+
+
+# 32비트 가상 머신 명령어 저장
+# python -m venv {폴더명}
+# 주의사항: 해당 명령어를 수행하는 python(w).exe 파일 속성을 관리자 모드로 실행 상태가 되어야 acticate를 포함한 파일들이 전부 생성
+# 폴더 생성 후에, cmd로 해당 폴더 아래 Script 폴더 아래 activate 실행하면 가상 머신 상태로 CLI 사용 가능
