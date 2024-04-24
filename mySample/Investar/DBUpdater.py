@@ -103,7 +103,8 @@ class DBUpdater:
                       format(tmnow, company, code, page, pages), end="\r")
             df = df.rename(columns={'날짜':'date', '종가':'close', '전일비':'diff', 
                                     '시가':'open', '고가':'high', '저가':'low', '거래량':'volume'}) # 네이버 금융의 한글 칼럼명을 영문으로 변경한다.
-            df['date'] = df['date'].replace('.', '-') #
+            df['date'] = df['date'].str.replace('.', '-') #
+            df['diff'] = df['diff'].str.extract(r'(\d+)') #
             df = df.dropna()
             # 마리아디비에서 BIGINT형으로 지정한 칼럼들의 데이터형을 int형으로 변경한다.
             df[['close','diff','open','high','low','volume']] = df[['close','diff','open','high','low','volume']].astype(int)
