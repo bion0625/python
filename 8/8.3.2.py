@@ -25,5 +25,3 @@ def get_ohlc(code, qty):
     # 4. 날짜 데이터를 인덱스로 갖고 OHLC를 각각의 칼럼으로 갖는 데이터 프레임을 생성한다.
     df = pd.DataFrame(rows, columns=columns, index=index)
     return df
-
-get_ohlc('A305080', 10)
